@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MapReduce Project Selector - 7th Sem BDA</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,25 +15,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Firebase Configuration - REPLACE WITH YOUR CONFIG
-        const firebaseConfig = {
-  apiKey: "AIzaSyAsakwfrGCdkYOSo_eCRlf17H5_F5mOx7Q",
-  authDomain: "mapreduce-selector-5447d.firebaseapp.com",
-  databaseURL: "https://mapreduce-selector-5447d-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "mapreduce-selector-5447d",
-  storageBucket: "mapreduce-selector-5447d.firebasestorage.app",
-  messagingSenderId: "501867573328",
-  appId: "1:501867573328:web:a2953fae1fc42845646155",
-  measurementId: "G-54Y9GJRY05"
-};
-
-        // Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const database = firebase.database();
-
-        // Lucide Icons
+        // Lucide Icons as inline SVG components
         const Search = () => (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -72,20 +52,6 @@
                 <polyline points="23 4 23 10 17 10"></polyline>
                 <polyline points="1 20 1 14 7 14"></polyline>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-        );
-
-        const Eye = ({ size = 18 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-        );
-
-        const Edit = ({ size = 18 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
         );
 
@@ -162,111 +128,99 @@
             { id: 70, title: "Real-Time Web Server Log Analysis", category: "Other" }
         ];
 
+        // Simple localStorage-based storage (for single device use)
+        // Note: This will NOT sync between users automatically
+        const storage = {
+            get: (key) => {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            },
+            set: (key, value) => {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        };
+
         function ProjectSelector() {
             const [currentUser, setCurrentUser] = useState('');
             const [isLoggedIn, setIsLoggedIn] = useState(false);
-            const [viewOnlyMode, setViewOnlyMode] = useState(false);
             const [selections, setSelections] = useState({});
             const [searchTerm, setSearchTerm] = useState('');
             const [filterCategory, setFilterCategory] = useState('All');
             const [showAvailableOnly, setShowAvailableOnly] = useState(false);
             const [loading, setLoading] = useState(true);
-            const [showMySelections, setShowMySelections] = useState(false);
 
             const categories = ['All', ...new Set(projects.map(p => p.category))];
 
             useEffect(() => {
-                loadDataFromFirebase();
+                loadData();
             }, []);
 
-            const loadDataFromFirebase = () => {
+            const loadData = () => {
                 setLoading(true);
-                const selectionsRef = database.ref('projectSelections');
-                
-                selectionsRef.on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    setSelections(data || {});
-                    setLoading(false);
-                });
-
-                return () => selectionsRef.off();
+                const data = storage.get('project-selections');
+                if (data) {
+                    setSelections(data);
+                }
+                setLoading(false);
             };
 
-            const handleLogin = (mode) => {
-                if (mode === 'view') {
-                    setViewOnlyMode(true);
-                    setIsLoggedIn(true);
-                } else if (currentUser.trim()) {
-                    setViewOnlyMode(false);
+            const saveData = (newSelections) => {
+                storage.set('project-selections', newSelections);
+            };
+
+            const handleLogin = () => {
+                if (currentUser.trim()) {
                     setIsLoggedIn(true);
                 }
             };
 
-            const handleSelectProject = async (projectId) => {
-                if (!isLoggedIn || viewOnlyMode) {
-                    alert('Please log in with your name to select projects!');
+            const handleSelectProject = (projectId) => {
+                if (!isLoggedIn) {
+                    alert('Please enter your name first!');
                     return;
                 }
 
-                const projectRef = database.ref(`projectSelections/${projectId}`);
+                const newSelections = { ...selections };
                 
-                try {
-                    const snapshot = await projectRef.once('value');
-                    const currentSelections = snapshot.val() || [];
-                    
-                    // Check if user already selected this project
-                    const userIndex = currentSelections.indexOf(currentUser);
-                    
-                    if (userIndex !== -1) {
-                        // User already selected, remove selection
-                        const updated = currentSelections.filter(name => name !== currentUser);
-                        if (updated.length === 0) {
-                            await projectRef.remove();
-                        } else {
-                            await projectRef.set(updated);
-                        }
-                    } else {
-                        // Add user to selections
-                        const updated = [...currentSelections, currentUser];
-                        await projectRef.set(updated);
-                    }
-                } catch (error) {
-                    console.error('Error updating selection:', error);
-                    alert('Failed to update selection. Please try again.');
+                if (newSelections[projectId] && newSelections[projectId] !== currentUser) {
+                    alert(`This project is already selected by ${newSelections[projectId]}`);
+                    return;
                 }
-            };
 
-            const getUserProjects = () => {
-                if (!currentUser) return [];
-                const userProjects = [];
-                Object.keys(selections).forEach(projectId => {
-                    const users = selections[projectId];
-                    if (users && users.includes(currentUser)) {
-                        userProjects.push(parseInt(projectId));
-                    }
-                });
-                return userProjects;
+                const userCurrentProject = Object.keys(newSelections).find(
+                    key => newSelections[key] === currentUser
+                );
+
+                if (userCurrentProject && userCurrentProject !== projectId.toString()) {
+                    const confirmChange = window.confirm(
+                        `You already selected project #${userCurrentProject}. Do you want to change your selection?`
+                    );
+                    if (!confirmChange) return;
+                    delete newSelections[userCurrentProject];
+                }
+
+                if (newSelections[projectId] === currentUser) {
+                    delete newSelections[projectId];
+                } else {
+                    newSelections[projectId] = currentUser;
+                }
+
+                setSelections(newSelections);
+                saveData(newSelections);
             };
 
             const filteredProjects = projects.filter(project => {
                 const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                      project.id.toString().includes(searchTerm);
                 const matchesCategory = filterCategory === 'All' || project.category === filterCategory;
-                
-                if (showMySelections && !viewOnlyMode) {
-                    const userProjects = getUserProjects();
-                    return userProjects.includes(project.id) && matchesSearch && matchesCategory;
-                }
-                
-                const matchesAvailability = !showAvailableOnly || !selections[project.id] || selections[project.id].length === 0;
+                const matchesAvailability = !showAvailableOnly || !selections[project.id];
                 return matchesSearch && matchesCategory && matchesAvailability;
             });
 
             const stats = {
                 total: projects.length,
-                selected: Object.keys(selections).filter(key => selections[key] && selections[key].length > 0).length,
-                available: projects.length - Object.keys(selections).filter(key => selections[key] && selections[key].length > 0).length,
-                mySelections: viewOnlyMode ? 0 : getUserProjects().length
+                selected: Object.keys(selections).length,
+                available: projects.length - Object.keys(selections).length
             };
 
             if (loading) {
@@ -286,7 +240,6 @@
                         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
                             <h1 className="text-3xl font-bold text-center mb-2 text-purple-900">MapReduce Projects</h1>
                             <p className="text-center text-gray-600 mb-6">7th Sem BDA - Project Selection</p>
-                            
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Enter Your Name
@@ -295,43 +248,18 @@
                                     type="text"
                                     value={currentUser}
                                     onChange={(e) => setCurrentUser(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleLogin('edit')}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                                     placeholder="e.g., Abdul Rahman"
                                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                             </div>
-
-                            <div className="space-y-3">
-                                <button
-                                    onClick={() => handleLogin('edit')}
-                                    disabled={!currentUser.trim()}
-                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Edit size={20} />
-                                    Login & Select Project
-                                </button>
-
-                                <div className="relative">
-                                    <div className="absolute inset-0 flex items-center">
-                                        <div className="w-full border-t border-gray-300"></div>
-                                    </div>
-                                    <div className="relative flex justify-center text-sm">
-                                        <span className="px-2 bg-white text-gray-500">OR</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => handleLogin('view')}
-                                    className="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Eye size={20} />
-                                    View Only Mode
-                                </button>
-                            </div>
-
-                            <p className="text-xs text-gray-500 text-center mt-4">
-                                View Only Mode lets you browse without making changes
-                            </p>
+                            <button
+                                onClick={handleLogin}
+                                disabled={!currentUser.trim()}
+                                className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Continue
+                            </button>
                         </div>
                     </div>
                 );
@@ -347,41 +275,18 @@
                                     <p className="text-gray-600">7th Sem BDA</p>
                                 </div>
                                 <div className="text-right">
-                                    {viewOnlyMode ? (
-                                        <>
-                                            <div className="flex items-center gap-2 text-blue-600 font-semibold mb-1">
-                                                <Eye size={20} />
-                                                <span>View Only Mode</span>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setIsLoggedIn(false);
-                                                    setViewOnlyMode(false);
-                                                }}
-                                                className="text-xs text-purple-600 hover:underline"
-                                            >
-                                                Login to select projects
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <p className="text-sm text-gray-600">Logged in as</p>
-                                            <p className="font-bold text-purple-900">{currentUser}</p>
-                                            <button
-                                                onClick={() => {
-                                                    setIsLoggedIn(false);
-                                                    setCurrentUser('');
-                                                }}
-                                                className="text-xs text-purple-600 hover:underline"
-                                            >
-                                                Logout
-                                            </button>
-                                        </>
-                                    )}
+                                    <p className="text-sm text-gray-600">Logged in as</p>
+                                    <p className="font-bold text-purple-900">{currentUser}</p>
+                                    <button
+                                        onClick={() => setIsLoggedIn(false)}
+                                        className="text-xs text-purple-600 hover:underline"
+                                    >
+                                        Change name
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="grid grid-cols-3 gap-4 mb-4">
                                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white">
                                     <div className="text-2xl font-bold">{stats.total}</div>
                                     <div className="text-sm opacity-90">Total Projects</div>
@@ -394,12 +299,6 @@
                                     <div className="text-2xl font-bold">{stats.available}</div>
                                     <div className="text-sm opacity-90">Available</div>
                                 </div>
-                                {!viewOnlyMode && (
-                                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white">
-                                        <div className="text-2xl font-bold">{stats.mySelections}</div>
-                                        <div className="text-sm opacity-90">My Selections</div>
-                                    </div>
-                                )}
                             </div>
 
                             <div className="space-y-3">
@@ -431,38 +330,28 @@
                                         <input
                                             type="checkbox"
                                             checked={showAvailableOnly}
-                                            onChange={(e) => {
-                                                setShowAvailableOnly(e.target.checked);
-                                                if (e.target.checked) setShowMySelections(false);
-                                            }}
+                                            onChange={(e) => setShowAvailableOnly(e.target.checked)}
                                             className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                                         />
-                                        <span className="text-sm font-medium">Available Only</span>
+                                        <span className="text-sm font-medium">Show Available Only</span>
                                     </label>
 
-                                    {!viewOnlyMode && (
-                                        <label className="flex items-center gap-2 px-4 py-2 bg-orange-100 rounded-lg cursor-pointer hover:bg-orange-200">
-                                            <input
-                                                type="checkbox"
-                                                checked={showMySelections}
-                                                onChange={(e) => {
-                                                    setShowMySelections(e.target.checked);
-                                                    if (e.target.checked) setShowAvailableOnly(false);
-                                                }}
-                                                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
-                                            />
-                                            <span className="text-sm font-medium">My Selections Only</span>
-                                        </label>
-                                    )}
+                                    <button
+                                        onClick={loadData}
+                                        className="ml-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                                    >
+                                        <RefreshCw size={16} />
+                                        Refresh
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             {filteredProjects.map(project => {
-                                const projectSelections = selections[project.id] || [];
-                                const isSelected = projectSelections.length > 0;
-                                const isSelectedByCurrentUser = !viewOnlyMode && projectSelections.includes(currentUser);
+                                const isSelected = !!selections[project.id];
+                                const isSelectedByCurrentUser = selections[project.id] === currentUser;
+                                const selectedBy = selections[project.id];
 
                                 return (
                                     <div
@@ -470,6 +359,8 @@
                                         className={`bg-white rounded-xl shadow-lg p-5 transition-all ${
                                             isSelectedByCurrentUser
                                                 ? 'ring-4 ring-green-500 ring-opacity-50'
+                                                : isSelected
+                                                ? 'opacity-75'
                                                 : 'hover:shadow-xl'
                                         }`}
                                     >
@@ -478,7 +369,7 @@
                                                 isSelectedByCurrentUser
                                                     ? 'bg-green-500 text-white'
                                                     : isSelected
-                                                    ? 'bg-blue-500 text-white'
+                                                    ? 'bg-gray-300 text-gray-600'
                                                     : 'bg-purple-500 text-white'
                                             }`}>
                                                 {project.id}
@@ -493,48 +384,42 @@
                                                 </div>
                                                 
                                                 {isSelected && (
-                                                    <div className="flex items-start gap-2 text-sm">
-                                                        <Users size={16} className="mt-1 flex-shrink-0" />
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {projectSelections.map((name, idx) => (
-                                                                <span
-                                                                    key={idx}
-                                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                        name === currentUser && !viewOnlyMode
-                                                                            ? 'bg-green-100 text-green-700 ring-2 ring-green-500'
-                                                                            : 'bg-blue-100 text-blue-700'
-                                                                    }`}
-                                                                >
-                                                                    {name}
-                                                                </span>
-                                                            ))}
-                                                        </div>
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Users size={16} />
+                                                        <span className={`font-medium ${
+                                                            isSelectedByCurrentUser ? 'text-green-600' : 'text-gray-600'
+                                                        }`}>
+                                                            Selected by: {selectedBy}
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {!viewOnlyMode && (
-                                                <button
-                                                    onClick={() => handleSelectProject(project.id)}
-                                                    className={`flex-shrink-0 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                                                        isSelectedByCurrentUser
-                                                            ? 'bg-red-500 text-white hover:bg-red-600'
-                                                            : 'bg-purple-600 text-white hover:bg-purple-700'
-                                                    }`}
-                                                >
-                                                    {isSelectedByCurrentUser ? (
-                                                        <span className="flex items-center gap-2">
-                                                            <XCircle size={18} />
-                                                            Remove
-                                                        </span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-2">
-                                                            <CheckCircle size={18} />
-                                                            Select
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => handleSelectProject(project.id)}
+                                                disabled={isSelected && !isSelectedByCurrentUser}
+                                                className={`flex-shrink-0 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                                                    isSelectedByCurrentUser
+                                                        ? 'bg-red-500 text-white hover:bg-red-600'
+                                                        : isSelected
+                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                                }`}
+                                            >
+                                                {isSelectedByCurrentUser ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <XCircle size={18} />
+                                                        Deselect
+                                                    </span>
+                                                ) : isSelected ? (
+                                                    'Taken'
+                                                ) : (
+                                                    <span className="flex items-center gap-2">
+                                                        <CheckCircle size={18} />
+                                                        Select
+                                                    </span>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
                                 );
