@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapReduce Project Selector - 7th Sem BDA</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        const firebaseConfig = {
+  apiKey: "AIzaSyAsakwfrGCdkYOSo_eCRlf17H5_F5mOx7Q",
+  authDomain: "mapreduce-selector-5447d.firebaseapp.com",
+  databaseURL: "https://mapreduce-selector-5447d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mapreduce-selector-5447d",
+  storageBucket: "mapreduce-selector-5447d.firebasestorage.app",
+  messagingSenderId: "501867573328",
+  appId: "1:501867573328:web:a2953fae1fc42845646155",
+  measurementId: "G-54Y9GJRY05"
+};
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+
+        // Lucide Icons
+        const Search = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+        );
+
+        const Users = ({ size = 16 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+        );
+
+        const CheckCircle = ({ size = 18 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        );
+
+        const XCircle = ({ size = 18 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        );
+
+        const RefreshCw = ({ size = 16, className = "" }) => (
+            <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+        );
+
+        const Eye = ({ size = 18 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        );
+
+        const Edit = ({ size = 18 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+        );
+
+        const projects = [
+            { id: 1, title: "Twitter Sentiment Analysis using MapReduce", category: "Social Media" },
+            { id: 2, title: "Facebook Post Engagement Analysis", category: "Social Media" },
+            { id: 3, title: "Hashtag Trend Analysis on Twitter", category: "Social Media" },
+            { id: 4, title: "Social Media Influencer Analysis", category: "Social Media" },
+            { id: 5, title: "LinkedIn Job Trend Analysis", category: "Social Media" },
+            { id: 6, title: "YouTube Comment Sentiment Analysis", category: "Social Media" },
+            { id: 7, title: "Instagram Post Analytics (Likes & Comments)", category: "Social Media" },
+            { id: 8, title: "Social Media Spam Detection", category: "Social Media" },
+            { id: 9, title: "Social Media Trend Prediction", category: "Social Media" },
+            { id: 10, title: "Social Network Graph Analysis", category: "Social Media" },
+            { id: 11, title: "Customer Purchase Pattern Analysis", category: "E-commerce" },
+            { id: 12, title: "Product Recommendation System", category: "E-commerce" },
+            { id: 13, title: "Online Review Sentiment Analysis", category: "E-commerce" },
+            { id: 14, title: "Cart Abandonment Analysis", category: "E-commerce" },
+            { id: 15, title: "E-commerce Sales Prediction", category: "E-commerce" },
+            { id: 16, title: "Inventory Demand Forecasting", category: "E-commerce" },
+            { id: 17, title: "Popular Product Trend Detection", category: "E-commerce" },
+            { id: 18, title: "Customer Segmentation for Marketing", category: "E-commerce" },
+            { id: 19, title: "Online Shopping Fraud Detection", category: "E-commerce" },
+            { id: 20, title: "Retail Price Pattern Analysis", category: "E-commerce" },
+            { id: 21, title: "Patient Record Analysis for Disease Patterns", category: "Healthcare" },
+            { id: 22, title: "Predicting Disease Outbreaks", category: "Healthcare" },
+            { id: 23, title: "Hospital Resource Utilization Analytics", category: "Healthcare" },
+            { id: 24, title: "Medical Image Metadata Analysis", category: "Healthcare" },
+            { id: 25, title: "Clinical Trial Data Processing", category: "Healthcare" },
+            { id: 26, title: "Real-Time Patient Monitoring Data Analysis", category: "Healthcare" },
+            { id: 27, title: "Healthcare Sentiment Analysis from Surveys", category: "Healthcare" },
+            { id: 28, title: "Health Insurance Claim Fraud Detection", category: "Healthcare" },
+            { id: 29, title: "Medical Treatment Pattern Analysis", category: "Healthcare" },
+            { id: 30, title: "Genomic Data Processing with MapReduce", category: "Healthcare" },
+            { id: 31, title: "Credit Card Fraud Detection", category: "Finance" },
+            { id: 32, title: "Bank Transaction Analysis", category: "Finance" },
+            { id: 33, title: "Customer Loan Risk Prediction", category: "Finance" },
+            { id: 34, title: "Stock Market Trend Analysis", category: "Finance" },
+            { id: 35, title: "Financial News Sentiment Analysis", category: "Finance" },
+            { id: 36, title: "ATM Transaction Pattern Analysis", category: "Finance" },
+            { id: 37, title: "Banking Customer Segmentation", category: "Finance" },
+            { id: 38, title: "Real-Time Trading Data Analytics", category: "Finance" },
+            { id: 39, title: "Insurance Claim Analytics", category: "Finance" },
+            { id: 40, title: "Financial KPI Analysis", category: "Finance" },
+            { id: 41, title: "Traffic Pattern Analysis", category: "Transportation" },
+            { id: 42, title: "Smart City Traffic Signal Optimization", category: "Transportation" },
+            { id: 43, title: "Ride-Sharing Data Analytics", category: "Transportation" },
+            { id: 44, title: "Vehicle Sensor Data Analysis", category: "Transportation" },
+            { id: 45, title: "Road Accident Prediction", category: "Transportation" },
+            { id: 46, title: "Public Transport Usage Analysis", category: "Transportation" },
+            { id: 47, title: "Airline Flight Delay Prediction", category: "Transportation" },
+            { id: 48, title: "Logistic Supply Chain Optimization", category: "Transportation" },
+            { id: 49, title: "Fleet Management Analytics", category: "Transportation" },
+            { id: 50, title: "IoT Sensor Data Aggregation", category: "Transportation" },
+            { id: 51, title: "Weather Data Processing", category: "Environment" },
+            { id: 52, title: "Air Quality Index Prediction", category: "Environment" },
+            { id: 53, title: "Climate Change Trend Analysis", category: "Environment" },
+            { id: 54, title: "Rainfall Pattern Analysis", category: "Environment" },
+            { id: 55, title: "Flood Prediction Analytics", category: "Environment" },
+            { id: 56, title: "Pollution Source Detection", category: "Environment" },
+            { id: 57, title: "Solar Energy Production Analysis", category: "Environment" },
+            { id: 58, title: "Environmental Sensor Data Processing", category: "Environment" },
+            { id: 59, title: "Water Quality Monitoring", category: "Environment" },
+            { id: 60, title: "Forest Fire Prediction", category: "Environment" },
+            { id: 61, title: "Academic Performance Analysis", category: "Other" },
+            { id: 62, title: "Student Behavior Analysis in LMS", category: "Other" },
+            { id: 63, title: "Movie Rating Prediction", category: "Other" },
+            { id: 64, title: "Music Streaming Analytics", category: "Other" },
+            { id: 65, title: "Crime Rate Analytics", category: "Other" },
+            { id: 66, title: "Email Spam Classification", category: "Other" },
+            { id: 67, title: "Real-Time Log File Analytics", category: "Other" },
+            { id: 68, title: "News Article Trend Analysis", category: "Other" },
+            { id: 69, title: "Large-Scale Text Mining using MapReduce", category: "Other" },
+            { id: 70, title: "Real-Time Web Server Log Analysis", category: "Other" }
+        ];
+
+        function ProjectSelector() {
+            const [currentUser, setCurrentUser] = useState('');
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [viewOnlyMode, setViewOnlyMode] = useState(false);
+            const [selections, setSelections] = useState({});
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterCategory, setFilterCategory] = useState('All');
+            const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [showMySelections, setShowMySelections] = useState(false);
+
+            const categories = ['All', ...new Set(projects.map(p => p.category))];
+
+            useEffect(() => {
+                loadDataFromFirebase();
+            }, []);
+
+            const loadDataFromFirebase = () => {
+                setLoading(true);
+                const selectionsRef = database.ref('projectSelections');
+                
+                selectionsRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    setSelections(data || {});
+                    setLoading(false);
+                });
+
+                return () => selectionsRef.off();
+            };
+
+            const handleLogin = (mode) => {
+                if (mode === 'view') {
+                    setViewOnlyMode(true);
+                    setIsLoggedIn(true);
+                } else if (currentUser.trim()) {
+                    setViewOnlyMode(false);
+                    setIsLoggedIn(true);
+                }
+            };
+
+            const handleSelectProject = async (projectId) => {
+                if (!isLoggedIn || viewOnlyMode) {
+                    alert('Please log in with your name to select projects!');
+                    return;
+                }
+
+                const projectRef = database.ref(`projectSelections/${projectId}`);
+                
+                try {
+                    const snapshot = await projectRef.once('value');
+                    const currentSelections = snapshot.val() || [];
+                    
+                    // Check if user already selected this project
+                    const userIndex = currentSelections.indexOf(currentUser);
+                    
+                    if (userIndex !== -1) {
+                        // User already selected, remove selection
+                        const updated = currentSelections.filter(name => name !== currentUser);
+                        if (updated.length === 0) {
+                            await projectRef.remove();
+                        } else {
+                            await projectRef.set(updated);
+                        }
+                    } else {
+                        // Add user to selections
+                        const updated = [...currentSelections, currentUser];
+                        await projectRef.set(updated);
+                    }
+                } catch (error) {
+                    console.error('Error updating selection:', error);
+                    alert('Failed to update selection. Please try again.');
+                }
+            };
+
+            const getUserProjects = () => {
+                if (!currentUser) return [];
+                const userProjects = [];
+                Object.keys(selections).forEach(projectId => {
+                    const users = selections[projectId];
+                    if (users && users.includes(currentUser)) {
+                        userProjects.push(parseInt(projectId));
+                    }
+                });
+                return userProjects;
+            };
+
+            const filteredProjects = projects.filter(project => {
+                const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                     project.id.toString().includes(searchTerm);
+                const matchesCategory = filterCategory === 'All' || project.category === filterCategory;
+                
+                if (showMySelections && !viewOnlyMode) {
+                    const userProjects = getUserProjects();
+                    return userProjects.includes(project.id) && matchesSearch && matchesCategory;
+                }
+                
+                const matchesAvailability = !showAvailableOnly || !selections[project.id] || selections[project.id].length === 0;
+                return matchesSearch && matchesCategory && matchesAvailability;
+            });
+
+            const stats = {
+                total: projects.length,
+                selected: Object.keys(selections).filter(key => selections[key] && selections[key].length > 0).length,
+                available: projects.length - Object.keys(selections).filter(key => selections[key] && selections[key].length > 0).length,
+                mySelections: viewOnlyMode ? 0 : getUserProjects().length
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+                        <div className="text-white text-xl flex items-center gap-2">
+                            <RefreshCw className="animate-spin" />
+                            Loading...
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!isLoggedIn) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                            <h1 className="text-3xl font-bold text-center mb-2 text-purple-900">MapReduce Projects</h1>
+                            <p className="text-center text-gray-600 mb-6">7th Sem BDA - Project Selection</p>
+                            
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter Your Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={currentUser}
+                                    onChange={(e) => setCurrentUser(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleLogin('edit')}
+                                    placeholder="e.g., Abdul Rahman"
+                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => handleLogin('edit')}
+                                    disabled={!currentUser.trim()}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Edit size={20} />
+                                    Login & Select Project
+                                </button>
+
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-gray-300"></div>
+                                    </div>
+                                    <div className="relative flex justify-center text-sm">
+                                        <span className="px-2 bg-white text-gray-500">OR</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => handleLogin('view')}
+                                    className="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Eye size={20} />
+                                    View Only Mode
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-gray-500 text-center mt-4">
+                                View Only Mode lets you browse without making changes
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-purple-900">MapReduce Project Selection</h1>
+                                    <p className="text-gray-600">7th Sem BDA</p>
+                                </div>
+                                <div className="text-right">
+                                    {viewOnlyMode ? (
+                                        <>
+                                            <div className="flex items-center gap-2 text-blue-600 font-semibold mb-1">
+                                                <Eye size={20} />
+                                                <span>View Only Mode</span>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setIsLoggedIn(false);
+                                                    setViewOnlyMode(false);
+                                                }}
+                                                className="text-xs text-purple-600 hover:underline"
+                                            >
+                                                Login to select projects
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-sm text-gray-600">Logged in as</p>
+                                            <p className="font-bold text-purple-900">{currentUser}</p>
+                                            <button
+                                                onClick={() => {
+                                                    setIsLoggedIn(false);
+                                                    setCurrentUser('');
+                                                }}
+                                                className="text-xs text-purple-600 hover:underline"
+                                            >
+                                                Logout
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+                                    <div className="text-2xl font-bold">{stats.total}</div>
+                                    <div className="text-sm opacity-90">Total Projects</div>
+                                </div>
+                                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white">
+                                    <div className="text-2xl font-bold">{stats.selected}</div>
+                                    <div className="text-sm opacity-90">Selected</div>
+                                </div>
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+                                    <div className="text-2xl font-bold">{stats.available}</div>
+                                    <div className="text-sm opacity-90">Available</div>
+                                </div>
+                                {!viewOnlyMode && (
+                                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white">
+                                        <div className="text-2xl font-bold">{stats.mySelections}</div>
+                                        <div className="text-sm opacity-90">My Selections</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="relative">
+                                    <div className="absolute left-3 top-3 text-gray-400">
+                                        <Search />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Search projects by title or number..."
+                                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                </div>
+                                
+                                <div className="flex gap-3 flex-wrap">
+                                    <select
+                                        value={filterCategory}
+                                        onChange={(e) => setFilterCategory(e.target.value)}
+                                        className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    
+                                    <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                        <input
+                                            type="checkbox"
+                                            checked={showAvailableOnly}
+                                            onChange={(e) => {
+                                                setShowAvailableOnly(e.target.checked);
+                                                if (e.target.checked) setShowMySelections(false);
+                                            }}
+                                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                        />
+                                        <span className="text-sm font-medium">Available Only</span>
+                                    </label>
+
+                                    {!viewOnlyMode && (
+                                        <label className="flex items-center gap-2 px-4 py-2 bg-orange-100 rounded-lg cursor-pointer hover:bg-orange-200">
+                                            <input
+                                                type="checkbox"
+                                                checked={showMySelections}
+                                                onChange={(e) => {
+                                                    setShowMySelections(e.target.checked);
+                                                    if (e.target.checked) setShowAvailableOnly(false);
+                                                }}
+                                                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                                            />
+                                            <span className="text-sm font-medium">My Selections Only</span>
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {filteredProjects.map(project => {
+                                const projectSelections = selections[project.id] || [];
+                                const isSelected = projectSelections.length > 0;
+                                const isSelectedByCurrentUser = !viewOnlyMode && projectSelections.includes(currentUser);
+
+                                return (
+                                    <div
+                                        key={project.id}
+                                        className={`bg-white rounded-xl shadow-lg p-5 transition-all ${
+                                            isSelectedByCurrentUser
+                                                ? 'ring-4 ring-green-500 ring-opacity-50'
+                                                : 'hover:shadow-xl'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                                                isSelectedByCurrentUser
+                                                    ? 'bg-green-500 text-white'
+                                                    : isSelected
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-purple-500 text-white'
+                                            }`}>
+                                                {project.id}
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-3 mb-2">
+                                                    <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
+                                                    <span className="flex-shrink-0 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                                                        {project.category}
+                                                    </span>
+                                                </div>
+                                                
+                                                {isSelected && (
+                                                    <div className="flex items-start gap-2 text-sm">
+                                                        <Users size={16} className="mt-1 flex-shrink-0" />
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {projectSelections.map((name, idx) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                                        name === currentUser && !viewOnlyMode
+                                                                            ? 'bg-green-100 text-green-700 ring-2 ring-green-500'
+                                                                            : 'bg-blue-100 text-blue-700'
+                                                                    }`}
+                                                                >
+                                                                    {name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {!viewOnlyMode && (
+                                                <button
+                                                    onClick={() => handleSelectProject(project.id)}
+                                                    className={`flex-shrink-0 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                                                        isSelectedByCurrentUser
+                                                            ? 'bg-red-500 text-white hover:bg-red-600'
+                                                            : 'bg-purple-600 text-white hover:bg-purple-700'
+                                                    }`}
+                                                >
+                                                    {isSelectedByCurrentUser ? (
+                                                        <span className="flex items-center gap-2">
+                                                            <XCircle size={18} />
+                                                            Remove
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-2">
+                                                            <CheckCircle size={18} />
+                                                            Select
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {filteredProjects.length === 0 && (
+                            <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
+                                <p className="text-gray-500 text-lg">No projects found matching your filters.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ProjectSelector />);
+    </script>
+</body>
+</html>
